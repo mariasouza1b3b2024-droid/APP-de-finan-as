@@ -1,324 +1,101 @@
-import React, { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  SafeAreaView
-} from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
+import { GraficoFinancas } from '@/components/ui/GraficoFinancas';
+import { FinanceContext } from '../../src/context/FinanceContext';
 
-
-export default function App() {
-  // --- ESTADOS (STATE) ---
-  const [transacoes, setTransacoes] = useState([
-    { id: '1', descricao: 'Salário', valor: 2500, tipo: 'receita', pago: true },
-    { id: '2', descricao: 'Aluguel', valor: 1200, tipo: 'despesa', pago: false },
-    { id: '3', descricao: 'Mercado', valor: 350, tipo: 'despesa', pago: true },
-  ]);
-
+export default function HomeScreen() {
+  // Puxando os dados do nosso "Banco de Dados Central"
+  const { transacoes, adicionarTransacao, alternarStatusPago } = useContext(FinanceContext);
 
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
-  const [tipo, setTipo] = useState('despesa'); // 'despesa' ou 'receita'
+  const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
 
-
-  // --- FUNÇÕES ---
-  // Adicionar nova transação
-  const adicionarTransacao = () => {
-    if (!descricao || !valor) {
-      alert('Por favor, preencha todos os campos!');
-      return;
-    }
-
-
-    const novaTransacao = {
-      id: Math.random().toString(),
+  const handleAdicionar = () => {
+    if (!descricao.trim() || !valor.trim()) return;
+    adicionarTransacao({
       descricao,
-      valor: parseFloat(valor),
+      valor: parseFloat(valor.replace(',', '.')),
       tipo,
       pago: false,
-    };
-
-
-    setTransacoes([...transacoes, novaTransacao]);
+      data: new Date().toLocaleDateString('pt-BR').slice(0, 5) // Ex: 12/06
+    });
     setDescricao('');
     setValor('');
   };
 
-
-  // Alternar o status de pago/não pago
-  const alternarPago = (id) => {
-    const listaAtualizada = transacoes.map(item => {
-      if (item.id === id) {
-        return { ...item, pago: !item.pago };
-      }
-      return item;
-    });
-    setTransacoes(listaAtualizada);
-  };
-
-
-  // --- CÁLCULOS PARA O GRÁFICO SIMPLES ---
-  const totalReceitas = transacoes
-    .filter(t => t.tipo === 'receita')
-    .reduce((sum, t) => sum + t.valor, 0);
-
-
-  const totalDespesas = transacoes
-    .filter(t => t.tipo === 'despesa')
-    .reduce((sum, t) => sum + t.valor, 0);
-
-
-  const saldoTotal = totalReceitas - totalDespesas;
-
-
-  // Lógica de barras proporcionais para o gráfico
-  const maxValor = Math.max(totalReceitas, totalDespesas, 1);
-  const barraReceita = (totalReceitas / maxValor) * 100;
-  const barraDespesa = (totalDespesas / maxValor) * 100;
-
+  const totalReceitas = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+  const totalDespesas = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* NAVBAR */}
-      <View style={styles.navbar}>
-        <Text style={styles.navbarText}>MeuApp Finanças</Text>
-      </View>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.conteudo}>
+        <GraficoFinancas totalReceitas={totalReceitas} totalDespesas={totalDespesas} />
 
-
-      <View style={styles.conteudo}>
-        {/* GRÁFICO SIMPLES DE GASTOS */}
-        <View style={styles.cardGrafico}>
-          <Text style={styles.tituloSecao}>Resumo Visual</Text>
-          <View style={styles.containerBarras}>
-            <View style={styles.linhaGrafico}>
-              <Text style={styles.labelGrafico}>Receitas:</Text>
-              <View style={[styles.barra, { width: `${barraReceita}%`, backgroundColor: '#2ecc71' }]} />
-              <Text style={styles.valorGrafico}>R$ {totalReceitas}</Text>
-            </View>
-            <View style={styles.linhaGrafico}>
-              <Text style={styles.labelGrafico}>Despesas:</Text>
-              <View style={[styles.barra, { width: `${barraDespesa}%`, backgroundColor: '#e74c3c' }]} />
-              <Text style={styles.valorGrafico}>R$ {totalDespesas}</Text>
-            </View>
-          </View>
-          <Text style={[styles.saldoText, { color: saldoTotal >= 0 ? '#2ecc71' : '#e74c3c' }]}>
-            Saldo: R$ {saldoTotal.toFixed(2)}
-          </Text>
-        </View>
-
-
-        {/* FORMULÁRIO: ADICIONAR NOVA TRANSAÇÃO */}
         <View style={styles.formulario}>
-          <TextInput
-            style={styles.input}
-            placeholder="Descrição (ex: Luz, Freelance)"
-            value={descricao}
-            onChangeText={setDescricao}
-          />
-          <TextInput
-            style={styles.input}
-            placeholder="Valor (ex: 150.00)"
-            keyboardType="numeric"
-            value={valor}
-            onChangeText={setValor}
-          />
-         
-          {/* Seletor de Tipo (Receita/Despesa) */}
-          <View style={styles.botoesTipo}>
-            <TouchableOpacity
-              style={[styles.botaoTipo, tipo === 'receita' && styles.ativoReceita]}
-              onPress={() => setTipo('receita')}
-            >
-              <Text style={tipo === 'receita' ? styles.textoAtivo : styles.textoInativo}>Receita</Text>
+          <Text style={styles.secaoTitulo}>Nova Transação</Text>
+          <TextInput style={styles.input} placeholder="Descrição (Ex: Luz, Freelance)" value={descricao} onChangeText={setDescricao} />
+          <TextInput style={styles.input} placeholder="Valor (R$)" keyboardType="numeric" value={valor} onChangeText={setValor} />
+          <View style={styles.tipoContainer}>
+            <TouchableOpacity style={[styles.botaoTipo, tipo === 'receita' && styles.botaoTipoReceitaAtivo]} onPress={() => setTipo('receita')}>
+              <Text style={[styles.textoBotaoTipo, tipo === 'receita' && styles.textoAtivo]}>Receita</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.botaoTipo, tipo === 'despesa' && styles.ativoDespesa]}
-              onPress={() => setTipo('despesa')}
-            >
-              <Text style={tipo === 'despesa' ? styles.textoAtivo : styles.textoInativo}>Despesa</Text>
+            <TouchableOpacity style={[styles.botaoTipo, tipo === 'despesa' && styles.botaoTipoDespesaAtivo]} onPress={() => setTipo('despesa')}>
+              <Text style={[styles.textoBotaoTipo, tipo === 'despesa' && styles.textoAtivo]}>Despesa</Text>
             </TouchableOpacity>
           </View>
-
-
-          <TouchableOpacity style={styles.botaoAdicionar} onPress={adicionarTransacao}>
+          <TouchableOpacity style={styles.botaoAdicionar} onPress={handleAdicionar}>
             <Text style={styles.textoBotaoAdicionar}>Adicionar Transação</Text>
           </TouchableOpacity>
         </View>
 
-
-        {/* LISTA DE DESPESAS E RECEITAS */}
-        <Text style={styles.tituloSecao}>Suas Transações</Text>
-        <FlatList
-          data={transacoes}
+        <Text style={styles.secaoTituloLista}>Histórico Financeiro Recente</Text>
+        <FlatList 
+          data={transacoes.slice(0, 5)} // Mostra só as 5 últimas na home
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.itemTransacao}>
               <View>
                 <Text style={styles.itemDescricao}>{item.descricao}</Text>
-                <Text style={[styles.itemValor, { color: item.tipo === 'receita' ? '#2ecc71' : '#e74c3c' }]}>
+                <Text style={[styles.itemValor, item.tipo === 'receita' ? styles.corReceita : styles.corDespesa]}>
                   {item.tipo === 'receita' ? '+' : '-'} R$ {item.valor.toFixed(2)}
                 </Text>
               </View>
-             
-              {/* Botão Marcar como Pago */}
-              <TouchableOpacity
-                style={[styles.botaoPago, item.pago ? styles.pago : styles.naoPago]}
-                onPress={() => alternarPago(item.id)}
-              >
-                <Text style={styles.textoBotaoPago}>
-                  {item.pago ? '✓ Pago' : '⏳ Pendente'}
-                </Text>
+              <TouchableOpacity style={[styles.botaoStatus, item.pago ? styles.statusPago : styles.statusPendente]} onPress={() => alternarStatusPago(item.id)}>
+                <Text style={styles.textoBotaoStatus}>{item.pago ? 'Pago' : 'Pendente'}</Text>
               </TouchableOpacity>
             </View>
           )}
         />
-      </View>
-
-
-      {/* FOOTER */}
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>© 2026 Controle Financeiro Inc.</Text>
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-
-// --- ESTILOS (CSS DO REACT NATIVE) ---
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#f5f6fa',
-  },
-  navbar: {
-    height: 60,
-    backgroundColor: '#34495e',
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 4,
-  },
-  navbarText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  conteudo: {
-    flex: 1,
-    padding: 15,
-  },
-  cardGrafico: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    elevation: 2,
-  },
-  tituloSecao: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#2c3e50',
-  },
-  containerBarras: {
-    marginVertical: 10,
-  },
-  linhaGrafico: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelGrafico: {
-    width: 70,
-    fontSize: 12,
-    color: '#7f8c8d',
-  },
-  barra: {
-    height: 12,
-    borderRadius: 6,
-    marginHorizontal: 10,
-    flex: 1,
-    maxWidth: '60%',
-  },
-  valorGrafico: {
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-  saldoText: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    fontSize: 16,
-    marginTop: 5,
-  },
-  formulario: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-    elevation: 2,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#dcdde1',
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-  },
-  botoesTipo: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  botaoTipo: {
-    flex: 1,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#dcdde1',
-    alignItems: 'center',
-    borderRadius: 6,
-    marginHorizontal: 2,
-  },
-  ativoReceita: { backgroundColor: '#2ecc71', borderColor: '#2ecc71' },
-  ativoDespesa: { backgroundColor: '#e74c3c', borderColor: '#e74c3c' },
-  textoAtivo: { color: '#fff', fontWeight: 'bold' },
-  textoInativo: { color: '#7f8c8d' },
-  botaoAdicionar: {
-    backgroundColor: '#3498db',
-    padding: 12,
-    borderRadius: 6,
-    alignItems: 'center',
-  },
-  textoBotaoAdicionar: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  itemTransacao: {
-    backgroundColor: '#fff',
-    padding: 15,
-    borderRadius: 8,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    elevation: 1,
-  },
-  itemDescricao: { fontSize: 16, fontWeight: 'bold' },
-  itemValor: { fontSize: 14, marginTop: 4 },
-  botaoPago: {
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 20,
-  },
-  pago: { backgroundColor: '#d4edda' },
-  naoPago: { backgroundColor: '#f8d7da' },
-  textoBotaoPago: { fontSize: 12, fontWeight: 'bold' },
-  footer: {
-    height: 40,
-    backgroundColor: '#2c3e50',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  footerText: { color: '#bdc3c7', fontSize: 12 },
+  container: { flex: 1, backgroundColor: '#f5f6fa' },
+  conteudo: { flex: 1, padding: 16 },
+  formulario: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginVertical: 10, elevation: 1 },
+  secaoTitulo: { fontSize: 16, fontWeight: 'bold', marginBottom: 12 },
+  secaoTituloLista: { fontSize: 16, fontWeight: 'bold', marginTop: 15, marginBottom: 8 },
+  input: { borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 10, marginBottom: 10 },
+  tipoContainer: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+  botaoTipo: { flex: 1, borderWidth: 1, borderColor: '#ddd', padding: 10, alignItems: 'center', borderRadius: 6, marginHorizontal: 4 },
+  botaoTipoReceitaAtivo: { backgroundColor: '#2ecc71', borderColor: '#2ecc71' },
+  botaoTipoDespesaAtivo: { backgroundColor: '#e74c3c', borderColor: '#e74c3c' },
+  textoBotaoTipo: { color: '#555', fontWeight: '600' },
+  textoAtivo: { color: '#fff' },
+  botaoAdicionar: { backgroundColor: '#34495e', padding: 12, borderRadius: 6, alignItems: 'center' },
+  textoBotaoAdicionar: { color: '#fff', fontWeight: 'bold' },
+  itemTransacao: { backgroundColor: '#fff', padding: 14, borderRadius: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  itemDescricao: { fontSize: 15, fontWeight: '500' },
+  itemValor: { fontSize: 14, fontWeight: 'bold', marginTop: 2 },
+  corReceita: { color: '#2ecc71' },
+  corDespesa: { color: '#e74c3c' },
+  botaoStatus: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 20 },
+  statusPago: { backgroundColor: '#2ecc71' },
+  statusPendente: { backgroundColor: '#f1c40f' },
+  textoBotaoStatus: { color: '#fff', fontSize: 12, fontWeight: 'bold' }
 });
 
 // import * as Device from 'expo-device';
