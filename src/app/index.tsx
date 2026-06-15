@@ -1,37 +1,44 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, SafeAreaView, KeyboardAvoidingView, Platform } from 'react-native';
 import { GraficoFinancas } from '@/components/ui/GraficoFinancas';
+import { useContext, useState } from 'react';
+import { FlatList, KeyboardAvoidingView, Platform, SafeAreaView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FinanceContext } from '../../src/context/FinanceContext';
 
 export default function HomeScreen() {
-  // Puxando os dados do nosso "Banco de Dados Central"
   const { transacoes, adicionarTransacao, alternarStatusPago } = useContext(FinanceContext);
 
   const [descricao, setDescricao] = useState('');
   const [valor, setValor] = useState('');
   const [tipo, setTipo] = useState<'receita' | 'despesa'>('despesa');
 
+  // CÓDIGO: Envia os dados digitados para o banco de dados
   const handleAdicionar = () => {
     if (!descricao.trim() || !valor.trim()) return;
     adicionarTransacao({
       descricao,
-      valor: parseFloat(valor.replace(',', '.')),
+      valor: parseFloat(valor.replace(',', '.')), // Impede erro de vírgula
       tipo,
-      pago: false,
-      data: new Date().toLocaleDateString('pt-BR').slice(0, 5) // Ex: 12/06
+      pago: false
     });
     setDescricao('');
     setValor('');
   };
 
+  // CÓDIGO: Calcula o total bruto de tudo que entrou e tudo que saiu
   const totalReceitas = transacoes.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
   const totalDespesas = transacoes.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
+
+  // CÓDIGO MÁGICO: Calcula o seu SALDO ATUAL (O que você tem menos o que você gastou)
+  const saldoDisponivel = totalReceitas - totalDespesas;
 
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.conteudo}>
-        <GraficoFinancas totalReceitas={totalReceitas} totalDespesas={totalDespesas} />
+        
+        {/* FUNCIONALIDADE: Passa o "saldoDisponivel" para o gráfico. 
+            Agora, quando você colocar uma despesa, o saldo diminui! */}
+        <GraficoFinancas saldoDisponivel={saldoDisponivel} totalDespesas={totalDespesas} />
 
+        {/* FUNCIONALIDADE: Formulário para cadastrar nova entrada/saída */}
         <View style={styles.formulario}>
           <Text style={styles.secaoTitulo}>Nova Transação</Text>
           <TextInput style={styles.input} placeholder="Descrição (Ex: Luz, Freelance)" value={descricao} onChangeText={setDescricao} />
@@ -50,8 +57,10 @@ export default function HomeScreen() {
         </View>
 
         <Text style={styles.secaoTituloLista}>Histórico Financeiro Recente</Text>
+        
+        {/* FUNCIONALIDADE: Lista rápida da Home */}
         <FlatList 
-          data={transacoes.slice(0, 5)} // Mostra só as 5 últimas na home
+          data={transacoes.slice(0, 5)} 
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <View style={styles.itemTransacao}>
@@ -72,6 +81,7 @@ export default function HomeScreen() {
   );
 }
 
+// Estilos
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#f5f6fa' },
   conteudo: { flex: 1, padding: 16 },
@@ -97,102 +107,3 @@ const styles = StyleSheet.create({
   statusPendente: { backgroundColor: '#f1c40f' },
   textoBotaoStatus: { color: '#fff', fontSize: 12, fontWeight: 'bold' }
 });
-
-// import * as Device from 'expo-device';
-// import { Platform, StyleSheet } from 'react-native';
-// import { SafeAreaView } from 'react-native-safe-area-context';
-
-// import { AnimatedIcon } from '@/components/animated-icon';
-// import { HintRow } from '@/components/hint-row';
-// import { ThemedText } from '@/components/themed-text';
-// import { ThemedView } from '@/components/themed-view';
-// import { WebBadge } from '@/components/web-badge';
-// import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
-
-// function getDevMenuHint() {
-//   if (Platform.OS === 'web') {
-//     return <ThemedText type="small">use browser devtools</ThemedText>;
-//   }
-//   if (Device.isDevice) {
-//     return (
-//       <ThemedText type="small">
-//         shake device or press <ThemedText type="code">m</ThemedText> in terminal
-//       </ThemedText>
-//     );
-//   }
-//   const shortcut = Platform.OS === 'android' ? 'cmd+m (or ctrl+m)' : 'cmd+d';
-//   return (
-//     <ThemedText type="small">
-//       press <ThemedText type="code">{shortcut}</ThemedText>
-//     </ThemedText>
-//   );
-// }
-
-// export default function HomeScreen() {
-//   return (
-//     <ThemedView style={styles.container}>
-//       <SafeAreaView style={styles.safeArea}>
-//         <ThemedView style={styles.heroSection}>
-//           <AnimatedIcon />
-//           <ThemedText type="title" style={styles.title}>
-//             Welcome to&nbsp;Expo
-//           </ThemedText>
-//         </ThemedView>
-
-//         <ThemedText type="code" style={styles.code}>
-//           get started
-//         </ThemedText>
-
-//         <ThemedView type="backgroundElement" style={styles.stepContainer}>
-//           <HintRow
-//             title="Try editing"
-//             hint={<ThemedText type="code">src/app/index.tsx</ThemedText>}
-//           />
-//           <HintRow title="Dev tools" hint={getDevMenuHint()} />
-//           <HintRow
-//             title="Fresh start"
-//             hint={<ThemedText type="code">npm run reset-project</ThemedText>}
-//           />
-//         </ThemedView>
-
-//         {Platform.OS === 'web' && <WebBadge />}
-//       </SafeAreaView>
-//     </ThemedView>
-//   );
-// }
-
-// const styles = StyleSheet.create({
-//   container: {
-//     flex: 1,
-//     justifyContent: 'center',
-//     flexDirection: 'row',
-//   },
-//   safeArea: {
-//     flex: 1,
-//     paddingHorizontal: Spacing.four,
-//     alignItems: 'center',
-//     gap: Spacing.three,
-//     paddingBottom: BottomTabInset + Spacing.three,
-//     maxWidth: MaxContentWidth,
-//   },
-//   heroSection: {
-//     alignItems: 'center',
-//     justifyContent: 'center',
-//     flex: 1,
-//     paddingHorizontal: Spacing.four,
-//     gap: Spacing.four,
-//   },
-//   title: {
-//     textAlign: 'center',
-//   },
-//   code: {
-//     textTransform: 'uppercase',
-//   },
-//   stepContainer: {
-//     gap: Spacing.three,
-//     alignSelf: 'stretch',
-//     paddingHorizontal: Spacing.three,
-//     paddingVertical: Spacing.four,
-//     borderRadius: Spacing.four,
-//   },
-// });

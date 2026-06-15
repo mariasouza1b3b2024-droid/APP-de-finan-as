@@ -1,46 +1,66 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, Modal, TextInput, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useContext, useState } from 'react';
+import { Alert, FlatList, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { FinanceContext } from '../../src/context/FinanceContext';
 
 export default function MetasScreen() {
   const { metas, adicionarMeta, depositarMeta, resgatarTudoMeta } = useContext(FinanceContext);
+  const router = useRouter(); 
   
-  // Controles de Janelas Flutuantes (Modais)
   const [modalCriar, setModalCriar] = useState(false);
   const [modalAcao, setModalAcao] = useState(false);
   
-  // Variáveis temporárias para criação
   const [nome, setNome] = useState('');
   const [motivo, setMotivo] = useState('');
   const [valorAlvo, setValorAlvo] = useState('');
 
-  // Variáveis para depósito em uma meta existente
   const [metaSelecionada, setMetaSelecionada] = useState<string | null>(null);
   const [valorDeposito, setValorDeposito] = useState('');
 
+  // CÓDIGO: Salva a nova caixinha aceitando valores com vírgula (replace)
   const handleCriarMeta = () => {
     if (!nome || !valorAlvo) return;
-    adicionarMeta({ nome, motivo, valorAlvo: parseFloat(valorAlvo) });
+    adicionarMeta({ 
+      nome, 
+      motivo, 
+      valorAlvo: parseFloat(valorAlvo.replace(',', '.')) 
+    });
     setModalCriar(false);
     setNome(''); setMotivo(''); setValorAlvo('');
   };
 
+  // CÓDIGO: Deposita o dinheiro na caixinha nova aceitando valores com vírgula (replace)
   const handleDepositar = () => {
     if (metaSelecionada && valorDeposito) {
-      depositarMeta(metaSelecionada, parseFloat(valorDeposito));
+      depositarMeta(metaSelecionada, parseFloat(valorDeposito.replace(',', '.')));
       setModalAcao(false);
       setValorDeposito('');
     }
   };
 
   const handleResgatarTudo = () => {
-    if (metaSelecionada) {
-      Alert.alert('Quebrar o cofrinho?', 'Você vai resgatar todo o dinheiro e fechar essa meta. Tem certeza?', [
+    if (!metaSelecionada) return;
+
+    const executarResgate = () => {
+      resgatarTudoMeta(metaSelecionada);
+      setModalAcao(false);
+      
+      if (Platform.OS === 'web') {
+        window.alert('Sucesso! Dinheiro retirado com sucesso e voltou para sua carteira.');
+        router.push('/'); 
+      } else {
+        Alert.alert('Sucesso!', 'Dinheiro retirado com sucesso e voltou para sua carteira.');
+        router.push('/'); 
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      const confirmou = window.confirm('Você vai resgatar todo o dinheiro e apagar essa caixinha. Tem certeza?');
+      if (confirmou) executarResgate();
+    } else {
+      Alert.alert('Quebrar o cofrinho?', 'Você vai resgatar todo o dinheiro e apagar essa caixinha. Tem certeza?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sim, resgatar', onPress: () => {
-          resgatarTudoMeta(metaSelecionada);
-          setModalAcao(false);
-        }}
+        { text: 'Sim, resgatar', onPress: executarResgate }
       ]);
     }
   };
@@ -75,7 +95,6 @@ export default function MetasScreen() {
         <Text style={styles.botaoTextoBranco}>+ Criar Nova Caixinha</Text>
       </TouchableOpacity>
 
-      {/* JANELA: Criar Nova Meta */}
       <Modal visible={modalCriar} transparent={true} animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -94,7 +113,6 @@ export default function MetasScreen() {
         </View>
       </Modal>
 
-      {/* JANELA: Ações da Caixinha (Depositar / Resgatar) */}
       <Modal visible={modalAcao} transparent={true} animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
@@ -108,7 +126,7 @@ export default function MetasScreen() {
 
             <View style={styles.linhaDivisoria} />
 
-            <Text style={styles.textoInstrucao}>Ou resgatar o valor (quebra a meta):</Text>
+            <Text style={styles.textoInstrucao}>Ou resgatar o valor (Apaga a meta):</Text>
             <TouchableOpacity style={styles.botaoPerigo} onPress={handleResgatarTudo}>
               <Text style={styles.botaoTextoBranco}>Resgatar Tudo</Text>
             </TouchableOpacity>
@@ -132,11 +150,9 @@ const styles = StyleSheet.create({
   metaMotivo: { fontSize: 13, color: '#7f8c8d', marginBottom: 10 },
   metaProgresso: { fontSize: 14, color: '#2c3e50', fontWeight: 'bold', marginBottom: 8 },
   barraFundo: { height: 10, backgroundColor: '#ecf0f1', borderRadius: 5, overflow: 'hidden' },
-  barraFrente: { height: '100%', backgroundColor: '#9b59b6' }, // Cor roxa estilo Nubank!
+  barraFrente: { height: '100%', backgroundColor: '#9b59b6' }, 
   botaoPrincipal: { backgroundColor: '#1abc9c', padding: 15, borderRadius: 8, marginTop: 10, alignItems: 'center' },
   botaoTextoBranco: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
-  
-  // Estilos dos Modais
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
   modalBox: { width: '85%', backgroundColor: '#fff', padding: 20, borderRadius: 12 },
   modalTitulo: { fontSize: 18, fontWeight: 'bold', marginBottom: 15, textAlign: 'center' },

@@ -1,42 +1,45 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
-// Definindo o que o componente precisa receber para funcionar
+// FUNCIONALIDADE: Agora o gráfico pede o "saldoDisponivel" em vez de todas as receitas
 interface GraficoProps {
-  totalReceitas: number;
+  saldoDisponivel: number;
   totalDespesas: number;
 }
 
-export function GraficoFinancas({ totalReceitas, totalDespesas }: GraficoProps) {
-  const total = totalReceitas + totalDespesas;
+export function GraficoFinancas({ saldoDisponivel, totalDespesas }: GraficoProps) {
+  // CÓDIGO: O "total que entrou" é a soma do que você ainda tem + o que você já gastou.
+  // Isso representa 100% da sua barra para a matemática funcionar perfeitamente.
+  const totalEntrou = saldoDisponivel + totalDespesas;
   
-  // FUNCIONALIDADE: Cálculo matemático da porcentagem para definir a altura de cada barra do gráfico
-  // Se o total for 0, definimos 0% para evitar erro de divisão por zero.
-  const pctReceitas = total > 0 ? (totalReceitas / total) * 100 : 0;
-  const pctDespesas = total > 0 ? (totalDespesas / total) * 100 : 0;
+  // CÓDIGO: Calcula a porcentagem. Se o saldo ficar negativo (gastou mais do que tem), a barra zera (Math.max evita quebrar).
+  const pctSaldo = totalEntrou > 0 ? Math.max(0, Math.min((saldoDisponivel / totalEntrou) * 100, 100)) : 0;
+  const pctDespesas = totalEntrou > 0 ? Math.min((totalDespesas / totalEntrou) * 100, 100) : 0;
 
   return (
     <View style={styles.container}>
-      {/* COMPONENTE: Text para o título da seção */}
-      <Text style={styles.titulo}>Resumo Visual</Text>
+      <Text style={styles.titulo}>Resumo da Carteira</Text>
       
-      {/* COMPONENTE: View que serve de container para alinhar as barras lado a lado */}
       <View style={styles.graficoContainer}>
         
-        {/* BARRA DE RECEITAS */}
+        {/* CÓDIGO: Barra de Saldo (A antiga barra de Receita) */}
         <View style={styles.colunaContainer}>
-          {/* COMPONENTE: View estilizada cuja altura (height) muda dinamicamente conforme a porcentagem */}
-          <View style={[styles.barraReceita, { height: `${pctReceitas}%` }]} />
-          <Text style={styles.legendaBarra}>Receitas</Text>
-          <Text style={styles.valorBarra}>R$ {totalReceitas}</Text>
+          <View style={styles.caixaLimite}>
+            <View style={[styles.barraReceita, { height: `${pctSaldo}%` }]} />
+          </View>
+          <Text style={styles.legendaBarra}>Saldo</Text>
+          {/* Mostra o valor do Saldo. Se for negativo, mostra com o sinal de menos bonitinho */}
+          <Text style={[styles.valorBarra, saldoDisponivel < 0 && { color: '#e74c3c' }]}>
+            R$ {saldoDisponivel.toFixed(2)}
+          </Text>
         </View>
 
-        {/* BARRA DE DESPESAS */}
+        {/* CÓDIGO: Barra de Despesas (O quanto do seu dinheiro foi consumido) */}
         <View style={styles.colunaContainer}>
-          {/* COMPONENTE: Outra View para a barra de despesas, controlada pela porcentagem calculada */}
-          <View style={[styles.barraDespesa, { height: `${pctDespesas}%` }]} />
-          <Text style={styles.legendaBarra}>Despesas</Text>
-          <Text style={styles.valorBarra}>R$ {totalDespesas}</Text>
+          <View style={styles.caixaLimite}>
+            <View style={[styles.barraDespesa, { height: `${pctDespesas}%` }]} />
+          </View>
+          <Text style={styles.legendaBarra}>Gastos</Text>
+          <Text style={styles.valorBarra}>R$ {totalDespesas.toFixed(2)}</Text>
         </View>
 
       </View>
@@ -45,55 +48,13 @@ export function GraficoFinancas({ totalReceitas, totalDespesas }: GraficoProps) 
 }
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: '#fff',
-    padding: 16,
-    borderRadius: 8,
-    marginVertical: 10,
-    elevation: 2, // Sombra suave no Android
-    shadowColor: '#000', // Sombra suave no iOS
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  titulo: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    color: '#333',
-  },
-  graficoContainer: {
-    flexDirection: 'row', // Alinha as colunas uma ao lado da outra
-    justifyContent: 'space-around',
-    alignItems: 'flex-end', // Garante que as barras cresçam de baixo para cima
-    height: 150, // Altura máxima do gráfico
-    paddingTop: 10,
-  },
-  colunaContainer: {
-    alignItems: 'center',
-    width: '40%',
-    height: '100%',
-    justifyContent: 'flex-end', // Alinha tudo na base da coluna
-  },
-  barraReceita: {
-    width: 40,
-    backgroundColor: '#2ecc71', // Cor verde para receitas
-    borderRadius: 4,
-  },
-  barraDespesa: {
-    width: 40,
-    backgroundColor: '#e74c3c', // Cor vermelha para despesas
-    borderRadius: 4,
-  },
-  legendaBarra: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 8,
-    color: '#555',
-  },
-  valorBarra: {
-    fontSize: 12,
-    color: '#888',
-    marginTop: 2,
-  },
+  container: { backgroundColor: '#fff', padding: 16, borderRadius: 8, marginVertical: 10, elevation: 2 },
+  titulo: { fontSize: 16, fontWeight: 'bold', marginBottom: 5, color: '#333' },
+  graficoContainer: { flexDirection: 'row', justifyContent: 'space-around', alignItems: 'flex-end', paddingTop: 10 },
+  colunaContainer: { alignItems: 'center', width: '40%' },
+  caixaLimite: { height: 100, width: 40, justifyContent: 'flex-end' }, 
+  barraReceita: { width: '100%', backgroundColor: '#2ecc71', borderRadius: 4 },
+  barraDespesa: { width: '100%', backgroundColor: '#e74c3c', borderRadius: 4 },
+  legendaBarra: { fontSize: 14, fontWeight: '600', marginTop: 8, color: '#555' },
+  valorBarra: { fontSize: 12, color: '#888', marginTop: 2 },
 });
